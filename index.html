@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Tic-Tac-Toe</h1>
+    <div class="game-container">
+        <div>
+            <label for="difficulty">Dificultad:</label>
+            <select id="difficulty">
+                <option value="easy">Fácil</option>
+                <option value="medium">Medio</option>
+                <option value="hard" selected>Difícil</option>
+            </select>
+        </div>
+        <div class="board" id="board">
+            <!-- The cells are generated dynamically -->
+        </div>
+        <div class="status" id="status">Turno de: X</div>
+        <button id="resetButton">Reiniciar Juego</button>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html>
