@@ -1,187 +1,180 @@
-// DOM element selection
-const board = document.getElementById('board');
-const statusText = document.getElementById('status');
-const resetButton = document.getElementById('resetButton');
-const difficultySelect = document.getElementById('difficulty');
+// DOM Elements
+const gameContainer = document.getElementById("game-container");
+const resultDisplay = document.getElementById("result-display");
+const resetButton = document.getElementById("reset-button");
+const historyContainer = document.getElementById("history-container");
+const difficultySelector = document.getElementById("difficulty");
 
-let currentPlayer = 'X';
+// Game Variables
+let board = Array.from({ length: 3 }, () => Array(3).fill(""));
+let currentPlayer = "X";
 let gameActive = true;
-let gameState = Array(9).fill(null);
+let history = [];
+let difficulty = "hard";
 
-const winningCombinations = [
-  [0, 1, 2], [3, 4, 5], [6, 7, 8],
-  [0, 3, 6], [1, 4, 7], [2, 5, 8],
-  [0, 4, 8], [2, 4, 6],
-];
-
-// Create cells dynamically
+// Initialize Game
 function createBoard() {
-  board.innerHTML = '';
-  gameState.forEach((_, index) => {
-    const cell = document.createElement('div');
-    cell.classList.add('cell');
-    cell.dataset.index = index;
-    cell.addEventListener('click', handleCellClick);
-    board.appendChild(cell);
-  });
+  gameContainer.innerHTML = "";
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.row = row;
+      cell.dataset.col = col;
+
+      // Agregar el evento de clic
+      cell.addEventListener("click", handlePlayerMove);
+      gameContainer.appendChild(cell);
+    }
+  }
 }
 
-// Handle click on a cell
-function handleCellClick(e) {
-  const cell = e.target;
-  const cellIndex = cell.dataset.index;
+// Handle Player's Move
+function handlePlayerMove(event) {
+  const cell = event.target;
+  const row = parseInt(cell.dataset.row);
+  const col = parseInt(cell.dataset.col);
 
-  if (gameState[cellIndex] || !gameActive || currentPlayer === 'O') return;
+  if (board[row][col] || !gameActive) return;
 
-  gameState[cellIndex] = currentPlayer;
+  board[row][col] = currentPlayer;
   cell.textContent = currentPlayer;
-  cell.classList.add('taken');
 
-  if (checkWinner()) {
-    statusText.textContent = `¡Ganador: ${currentPlayer}!`;
-    gameActive = false;
-    return;
-  }
+  const winner = checkWinner();
+  if (winner) return endGame(winner);
 
-  if (gameState.every(cell => cell)) {
-    statusText.textContent = '¡Empate!';
-    gameActive = false;
-    return;
-  }
-
-  currentPlayer = 'O';
-  statusText.textContent = `Turno de: ${currentPlayer}`;
-
-  if (currentPlayer === 'O') {
-    setTimeout(computerMove, 500);
-  }
+  currentPlayer = "O";
+  setTimeout(computerMove, 500);
 }
 
-// Computer movement based on difficulty
+// Computer's Move
 function computerMove() {
-  const difficulty = difficultySelect.value;
+  const move = getBestMove();
 
-  let move;
-  if (difficulty === 'easy') {
-    move = getRandomMove();
-  } else if (difficulty === 'medium') {
-    move = Math.random() > 0.5 ? findBestMove() : getRandomMove();
-  } else {
-    move = findBestMove();
-  }
+  if (move) {
+    const { row, col } = move;
+    board[row][col] = currentPlayer;
+    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+    cell.textContent = currentPlayer;
 
-  gameState[move] = 'O';
+    const winner = checkWinner();
+    if (winner) return endGame(winner);
 
-  const cell = document.querySelector(`[data-index="${move}"]`);
-  cell.textContent = 'O';
-  cell.classList.add('taken');
-
-  if (checkWinner()) {
-    statusText.textContent = `¡Ganador: O!`;
-    gameActive = false;
-    return;
-  }
-
-  if (gameState.every(cell => cell)) {
-    statusText.textContent = '¡Empate!';
-    gameActive = false;
-    return;
-  }
-
-  currentPlayer = 'X';
-  statusText.textContent = `Turno de: ${currentPlayer}`;
-}
-
-// Get a random move
-function getRandomMove() {
-  const availableMoves = gameState
-    .map((cell, index) => (cell === null ? index : null))
-    .filter(index => index !== null);
-  return availableMoves[Math.floor(Math.random() * availableMoves.length)];
-}
-
-// Check for a winner
-function checkWinner() {
-  return winningCombinations.some(combination => {
-    const [a, b, c] = combination;
-    return (
-      gameState[a] &&
-      gameState[a] === gameState[b] &&
-      gameState[a] === gameState[c]
-    );
-  });
-}
-
-// Minimax algorithm implementation
-function minimax(board, depth, isMaximizing) {
-  const winner = checkWinnerWithPlayer(board);
-  if (winner === 'O') return 10 - depth;
-  if (winner === 'X') return depth - 10;
-  if (board.every(cell => cell)) return 0;
-
-  if (isMaximizing) {
-    let bestScore = -Infinity;
-    for (let i = 0; i < board.length; i++) {
-      if (!board[i]) {
-        board[i] = 'O';
-        const score = minimax(board, depth + 1, false);
-        board[i] = null;
-        bestScore = Math.max(score, bestScore);
-      }
-    }
-    return bestScore;
-  } else {
-    let bestScore = Infinity;
-    for (let i = 0; i < board.length; i++) {
-      if (!board[i]) {
-        board[i] = 'X';
-        const score = minimax(board, depth + 1, true);
-        board[i] = null;
-        bestScore = Math.min(score, bestScore);
-      }
-    }
-    return bestScore;
+    currentPlayer = "X";
   }
 }
 
-// Find the best move
+// Determine Best Move
+function getBestMove() {
+  switch (difficulty) {
+    case "easy":
+      return findRandomMove();
+    case "medium":
+      return Math.random() < 0.5 ? findBestMove() : findRandomMove();
+    case "hard":
+    default:
+      return findBestMove();
+  }
+}
+
+// Find Random Move
+function findRandomMove() {
+  const availableMoves = board.flatMap((row, rowIndex) =>
+    row.map((cell, colIndex) => (cell === "" ? { row: rowIndex, col: colIndex } : null))
+  ).filter(Boolean);
+
+  return availableMoves.length > 0
+    ? availableMoves[Math.floor(Math.random() * availableMoves.length)]
+    : null;
+}
+
+// Find Best Move
 function findBestMove() {
   let bestScore = -Infinity;
-  let move;
-  for (let i = 0; i < gameState.length; i++) {
-    if (!gameState[i]) {
-      gameState[i] = 'O';
-      const score = minimax(gameState, 0, false);
-      gameState[i] = null;
-      if (score > bestScore) {
-        bestScore = score;
-        move = i;
+  let bestMove = null;
+
+  board.forEach((row, rowIndex) => {
+    row.forEach((cell, colIndex) => {
+      if (!cell) {
+        board[rowIndex][colIndex] = "O";
+        const score = minimax(board, 0, false);
+        board[rowIndex][colIndex] = "";
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = { row: rowIndex, col: colIndex };
+        }
       }
-    }
-  }
-  return move;
+    });
+  });
+
+  return bestMove;
 }
 
-// Check for a winner with a specific board (for Minimax)
-function checkWinnerWithPlayer(board) {
-  for (const [a, b, c] of winningCombinations) {
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-      return board[a];
-    }
-  }
-  return null;
+// Minimax Algorithm
+function minimax(board, depth, isMaximizing) {
+  const winner = checkWinner();
+  if (winner) return winner === "O" ? 10 - depth : winner === "X" ? depth - 10 : 0;
+
+  const scores = [];
+
+  board.forEach((row, rowIndex) => {
+    row.forEach((cell, colIndex) => {
+      if (!cell) {
+        board[rowIndex][colIndex] = isMaximizing ? "O" : "X";
+        scores.push(minimax(board, depth + 1, !isMaximizing));
+        board[rowIndex][colIndex] = "";
+      }
+    });
+  });
+
+  return isMaximizing ? Math.max(...scores) : Math.min(...scores);
 }
 
-// Restart game
-resetButton.addEventListener('click', resetGame);
+// Check Winner or Draw
+function checkWinner() {
+  const lines = [
+    ...board,
+    ...board[0].map((_, colIndex) => board.map((row) => row[colIndex])),
+    [board[0][0], board[1][1], board[2][2]],
+    [board[0][2], board[1][1], board[2][0]],
+  ];
 
+  for (const line of lines) {
+    if (line.every((cell) => cell === "X")) return "X";
+    if (line.every((cell) => cell === "O")) return "O";
+  }
+
+  return board.flat().includes("") ? null : "draw";
+}
+
+// End Game
+function endGame(winner) {
+  gameActive = false;
+  resultDisplay.textContent = winner === "draw" ? "It's a draw!" : `Player ${winner} wins!`;
+  history.push(winner === "draw" ? "Empate" : winner === "X" ? "El jugador ganó!" : "El bot ganó!");
+  updateHistory();
+}
+
+// Reset Game
 function resetGame() {
-  currentPlayer = 'X';
+  board = Array.from({ length: 3 }, () => Array(3).fill(""));
+  currentPlayer = "X";
   gameActive = true;
-  gameState.fill(null);
-  statusText.textContent = `Turno de: ${currentPlayer}`;
+  resultDisplay.textContent = "";
   createBoard();
 }
 
-// Initialize game
+// Update History
+function updateHistory() {
+  historyContainer.innerHTML = history
+    .map((entry, index) => `<li class="list-group-item">${index + 1}. ${entry}</li>`)
+    .join("");
+}
+
+// Event Listeners
+resetButton.addEventListener("click", resetGame);
+difficultySelector.addEventListener("change", (e) => (difficulty = e.target.value));
+
+// Start Game
 createBoard();
