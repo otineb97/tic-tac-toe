@@ -22,7 +22,7 @@ function createBoard() {
       cell.dataset.row = row;
       cell.dataset.col = col;
 
-      // Agregar el evento de clic
+      // Add the click event
       cell.addEventListener("click", handlePlayerMove);
       gameContainer.appendChild(cell);
     }
@@ -152,7 +152,7 @@ function checkWinner() {
 function endGame(winner) {
   gameActive = false;
   resultDisplay.textContent = winner === "draw" ? "It's a draw!" : `Player ${winner} wins!`;
-  history.push(winner === "draw" ? "Empate" : winner === "X" ? "El jugador ganó!" : "El bot ganó!");
+  history.push(winner === "draw" ? "Draw" : winner === "X" ? "Player won!" : "Computer won!");
   updateHistory();
 }
 
