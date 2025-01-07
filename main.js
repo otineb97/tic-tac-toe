@@ -1,180 +1,133 @@
-// DOM Elements
-const gameContainer = document.getElementById("game-container");
-const resultDisplay = document.getElementById("result-display");
-const resetButton = document.getElementById("reset-button");
-const historyContainer = document.getElementById("history-container");
-const difficultySelector = document.getElementById("difficulty");
+const boardElement = document.getElementById('board');
+const resetButton = document.getElementById('reset');
+const scoreXElement = document.getElementById('scoreX');
+const scoreOElement = document.getElementById('scoreO');
+const winnerElement = document.getElementById('winner');
+    
+let board = Array(9).fill(null);
+let currentPlayer = 'X';
+let scores = { X: 0, O: 0 };
+let aiDifficulty;
 
-// Game Variables
-let board = Array.from({ length: 3 }, () => Array(3).fill(""));
-let currentPlayer = "X";
-let gameActive = true;
-let history = [];
-let difficulty = "hard";
+const winningCombinations = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
+];
 
-// Initialize Game
-function createBoard() {
-  gameContainer.innerHTML = "";
-  for (let row = 0; row < 3; row++) {
-    for (let col = 0; col < 3; col++) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.dataset.row = row;
-      cell.dataset.col = col;
+function initGame() {
+    board = Array(9).fill(null);
+    currentPlayer = 'X';
+    winnerElement.style.display = 'none';
+    winnerElement.textContent = '';
+    aiDifficulty = ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)];
+    renderBoard();
+}
 
-      // Add the click event
-      cell.addEventListener("click", handlePlayerMove);
-      gameContainer.appendChild(cell);
+function renderBoard() {
+    boardElement.innerHTML = '';
+    board.forEach((cell, index) => {
+      const cellElement = document.createElement('div');
+      cellElement.classList.add('cell');
+      if (cell) {
+        cellElement.textContent = cell;
+        cellElement.classList.add(cell.toLowerCase());
+        cellElement.classList.add('taken');
+      }
+      cellElement.addEventListener('click', () => handleMove(index));
+      boardElement.appendChild(cellElement);
+    });
+}
+
+function handleMove(index) {
+    if (board[index] || checkWinner()) return;
+    board[index] = currentPlayer;
+    renderBoard();
+    if (checkWinner()) {
+      scores[currentPlayer]++;
+      updateScores();
+      highlightWinningCells();
+      displayWinner(`Jugador ${currentPlayer} gana!`);
+      return;
     }
-  }
+    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+    if (currentPlayer === 'O') {
+      aiMove();
+    }
 }
 
-// Handle Player's Move
-function handlePlayerMove(event) {
-  const cell = event.target;
-  const row = parseInt(cell.dataset.row);
-  const col = parseInt(cell.dataset.col);
-
-  if (board[row][col] || !gameActive) return;
-
-  board[row][col] = currentPlayer;
-  cell.textContent = currentPlayer;
-
-  const winner = checkWinner();
-  if (winner) return endGame(winner);
-
-  currentPlayer = "O";
-  setTimeout(computerMove, 500);
+function aiMove() {
+    let move;
+    if (aiDifficulty === 'hard') {
+      move = minimax(board, 'O').index;
+    } else if (aiDifficulty === 'medium') {
+      move = Math.random() > 0.5 ? minimax(board, 'O').index : randomMove();
+    } else {
+      move = randomMove();
+    }
+    board[move] = 'O';
+    renderBoard();
+    if (checkWinner()) {
+      scores['O']++;
+      updateScores();
+      highlightWinningCells();
+      displayWinner('Jugador O gana!');
+      return;
+    }
+    currentPlayer = 'X';
 }
 
-// Computer's Move
-function computerMove() {
-  const move = getBestMove();
-
-  if (move) {
-    const { row, col } = move;
-    board[row][col] = currentPlayer;
-    const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-    cell.textContent = currentPlayer;
-
-    const winner = checkWinner();
-    if (winner) return endGame(winner);
-
-    currentPlayer = "X";
-  }
+function randomMove() {
+    const available = board.map((cell, index) => cell === null ? index : null).filter(i => i !== null);
+    return available[Math.floor(Math.random() * available.length)];
 }
 
-// Determine Best Move
-function getBestMove() {
-  switch (difficulty) {
-    case "easy":
-      return findRandomMove();
-    case "medium":
-      return Math.random() < 0.5 ? findBestMove() : findRandomMove();
-    case "hard":
-    default:
-      return findBestMove();
-  }
-}
+function minimax(newBoard, player) {
+    const available = newBoard.map((cell, index) => cell === null ? index : null).filter(i => i !== null);
+    if (checkWinner(newBoard, 'X')) return { score: -10 };
+    if (checkWinner(newBoard, 'O')) return { score: 10 };
+    if (available.length === 0) return { score: 0 };
 
-// Find Random Move
-function findRandomMove() {
-  const availableMoves = board.flatMap((row, rowIndex) =>
-    row.map((cell, colIndex) => (cell === "" ? { row: rowIndex, col: colIndex } : null))
-  ).filter(Boolean);
-
-  return availableMoves.length > 0
-    ? availableMoves[Math.floor(Math.random() * availableMoves.length)]
-    : null;
-}
-
-// Find Best Move
-function findBestMove() {
-  let bestScore = -Infinity;
-  let bestMove = null;
-
-  board.forEach((row, rowIndex) => {
-    row.forEach((cell, colIndex) => {
-      if (!cell) {
-        board[rowIndex][colIndex] = "O";
-        const score = minimax(board, 0, false);
-        board[rowIndex][colIndex] = "";
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestMove = { row: rowIndex, col: colIndex };
-        }
-      }
+    const moves = [];
+    available.forEach(index => {
+      const move = {};
+      move.index = index;
+      newBoard[index] = player;
+      move.score = minimax(newBoard, player === 'O' ? 'X' : 'O').score;
+      newBoard[index] = null;
+      moves.push(move);
     });
-  });
 
-  return bestMove;
+    return moves.reduce((bestMove, move) => (
+      (player === 'O' && move.score > bestMove.score) ||
+      (player === 'X' && move.score < bestMove.score) ? move : bestMove
+    ));
 }
 
-// Minimax Algorithm
-function minimax(board, depth, isMaximizing) {
-  const winner = checkWinner();
-  if (winner) return winner === "O" ? 10 - depth : winner === "X" ? depth - 10 : 0;
-
-  const scores = [];
-
-  board.forEach((row, rowIndex) => {
-    row.forEach((cell, colIndex) => {
-      if (!cell) {
-        board[rowIndex][colIndex] = isMaximizing ? "O" : "X";
-        scores.push(minimax(board, depth + 1, !isMaximizing));
-        board[rowIndex][colIndex] = "";
-      }
-    });
-  });
-
-  return isMaximizing ? Math.max(...scores) : Math.min(...scores);
+function checkWinner(boardState = board, player = currentPlayer) {
+    return winningCombinations.find(combination => 
+      combination.every(index => boardState[index] === player)
+    );
 }
 
-// Check Winner or Draw
-function checkWinner() {
-  const lines = [
-    ...board,
-    ...board[0].map((_, colIndex) => board.map((row) => row[colIndex])),
-    [board[0][0], board[1][1], board[2][2]],
-    [board[0][2], board[1][1], board[2][0]],
-  ];
-
-  for (const line of lines) {
-    if (line.every((cell) => cell === "X")) return "X";
-    if (line.every((cell) => cell === "O")) return "O";
-  }
-
-  return board.flat().includes("") ? null : "draw";
+function highlightWinningCells() {
+    const winningCombination = checkWinner(board);
+    if (winningCombination) {
+      winningCombination.forEach(index => {
+        document.querySelectorAll('.cell')[index].classList.add('winning');
+      });
+    }
 }
 
-// End Game
-function endGame(winner) {
-  gameActive = false;
-  resultDisplay.textContent = winner === "draw" ? "It's a draw!" : `Player ${winner} wins!`;
-  history.push(winner === "draw" ? "Draw" : winner === "X" ? "Player won!" : "Computer won!");
-  updateHistory();
+function displayWinner(message) {
+    winnerElement.textContent = message;
+    winnerElement.style.display = 'block';
 }
 
-// Reset Game
-function resetGame() {
-  board = Array.from({ length: 3 }, () => Array(3).fill(""));
-  currentPlayer = "X";
-  gameActive = true;
-  resultDisplay.textContent = "";
-  createBoard();
+function updateScores() {
+    scoreXElement.textContent = scores['X'];
+    scoreOElement.textContent = scores['O'];
 }
 
-// Update History
-function updateHistory() {
-  historyContainer.innerHTML = history
-    .map((entry, index) => `<li class="list-group-item">${index + 1}. ${entry}</li>`)
-    .join("");
-}
-
-// Event Listeners
-resetButton.addEventListener("click", resetGame);
-difficultySelector.addEventListener("change", (e) => (difficulty = e.target.value));
-
-// Start Game
-createBoard();
+resetButton.addEventListener('click', initGame);
+initGame();
