@@ -1,23 +1,63 @@
 body {
-    background-color: #1e1e1e;
+    background-color: #000;
     color: #fff;
 }
-
-#game-container {
-    width: 300px;
-    height: 300px;
+.board {
     display: grid;
     grid-template-rows: repeat(3, 1fr);
     grid-template-columns: repeat(3, 1fr);
     gap: 0px;
 }
-
-#game-container .cell {
+.card {
+    width: 18rem;
+}
+.cell {
+    width: auto;
+    height: 80px;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 2rem;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
+    background-color: #f2f2f2;
+    border: 1px solid #6c757d;
     cursor: pointer;
+}
+.cell.taken {
+    cursor: not-allowed;
+}
+.cell.x {
+    color: #ff85ea;
+}
+.cell.o {
+    color: #00feca;
+}
+.cell.winning {
+    background-color: #ffe161;
+}
+#winner {
+    display: none;
+    font-size: 1.2rem;
+    color: #fff;
+    margin-top: 10px;
+}
+strong, span {
+    color: #fff;
+}
+.custom-button {
+    display: inline-block;
+    font-weight: 400;
+    text-align: center;
+    vertical-align: middle;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: .375rem .75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    border-radius: .25rem;
+    transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+    background-color: #ffe161;
+    color: #333;
+}
+.custom-button:hover {
+    background-color: #ffd361;
 }
